@@ -1,0 +1,61 @@
+{
+  "name": "video-overlay",
+  "version": "1.0.0",
+  "description": "Fullscreen transparent video overlay application for desktop",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "text": "electron . --text",
+    "text-demo": "electron . --text \"Hello World!\"",
+    "text-with-video": "electron . --text-with-video",
+    "package-win": "electron-packager . VideoOverlay --platform=win32 --arch=x64 --out=build --overwrite",
+    "package-win-debug": "electron-packager . VideoOverlay --platform=win32 --arch=x64 --out=build --overwrite --console",
+    "build": "electron-packager . VideoOverlay --platform=win32 --arch=x64 --out=build --overwrite",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "electron",
+    "video",
+    "overlay",
+    "desktop",
+    "transparent",
+    "fullscreen"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^37.2.4",
+    "electron-packager": "^17.1.2"
+  },
+  "build": {
+    "appId": "com.videooverlay.app",
+    "productName": "Video Overlay",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "video/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": {
+        "target": "dir",
+        "arch": [
+          "x64"
+        ]
+      }
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "electronDownload": {
+      "cache": "./cache"
+    }
+  }
+}

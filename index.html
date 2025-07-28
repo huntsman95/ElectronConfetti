@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Overlay</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: transparent;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            cursor: none;
+        }
+
+        #video-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
+        }
+
+        #overlay-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: transparent;
+            pointer-events: none;
+            /* Improve rendering performance */
+            will-change: transform;
+            transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            /* Optimize for transparency */
+            mix-blend-mode: normal;
+        }
+
+        #error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            text-align: center;
+            z-index: 1001;
+            display: none;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            text-align: center;
+            z-index: 1001;
+            display: none;
+        }
+
+        #text-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 72px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8), 
+                         -1px -1px 0 rgba(0, 0, 0, 0.5),
+                         1px -1px 0 rgba(0, 0, 0, 0.5),
+                         -1px 1px 0 rgba(0, 0, 0, 0.5),
+                         1px 1px 0 rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            white-space: pre-line;
+            max-width: 90vw;
+            word-wrap: break-word;
+            display: none;
+            pointer-events: none;
+            /* Animation for entrance */
+            animation: textFadeIn 1s ease-in-out;
+        }
+
+        @keyframes textFadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        @keyframes textFadeOut {
+            from {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+        }
+
+        /* Fade out animation class */
+        .fade-out {
+            animation: textFadeOut 2s ease-in-out forwards !important;
+        }
+
+        /* Responsive text sizing */
+        @media (max-width: 1200px) {
+            #text-overlay {
+                font-size: 60px;
+            }
+        }
+
+        @media (max-width: 800px) {
+            #text-overlay {
+                font-size: 48px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            #text-overlay {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="video-container">
+        <video id="overlay-video" preload="auto" muted>
+            <source src="video/overlay.mp4" type="video/mp4">
+            <source src="video/overlay.webm" type="video/webm">
+            <source src="video/overlay.mov" type="video/quicktime">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <div id="error-message">
+        <h3>Video Error</h3>
+        <p id="error-text">Failed to load video file. Please check that a supported video file exists in the 'video' directory.</p>
+        <p><small>Supported formats: MP4, WebM, MOV</small></p>
+        <p><small>Application will exit in 5 seconds...</small></p>
+    </div>
+
+    <div id="loading" class="loading">
+        <h3>Video Overlay</h3>
+        <p>Preparing fullscreen video overlay...</p>
+        <p><small>Place your video file in the 'video' directory as 'overlay.mp4', 'overlay.webm', or 'overlay.mov'</small></p>
+    </div>
+
+    <div id="text-overlay"></div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const video = document.getElementById('overlay-video');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const loadingDiv = document.getElementById('loading');
+        const textOverlay = document.getElementById('text-overlay');
+
+        let videoLoaded = false;
+        let hasError = false;
+        let overlayConfig = { textMessage: '', showVideo: true };
+
+        // Request overlay configuration from main process
+        ipcRenderer.send('get-overlay-config');
+        
+        // Handle overlay configuration response
+        ipcRenderer.on('overlay-config', (event, config) => {
+            overlayConfig = config;
+            console.log('Overlay config received:', config);
+            
+            // Show text overlay if message is provided
+            if (config.textMessage && config.textMessage.trim() !== '') {
+                showTextOverlay(config.textMessage);
+            }
+            
+            // Hide video container if only showing text
+            if (!config.showVideo && config.textMessage) {
+                document.getElementById('video-container').style.display = 'none';
+                loadingDiv.style.display = 'none';
+                // Start fade out after 8 seconds, exit after complete fade (10 seconds total)
+                setTimeout(() => {
+                    fadeOutAndExit();
+                }, 8000);
+            }
+        });
+
+        // Handle global escape key from main process
+        ipcRenderer.on('escape-pressed', () => {
+            if (!escapePressed) {
+                handleEscapeKey();
+            }
+        });
+
+        function showTextOverlay(message) {
+            textOverlay.textContent = message;
+            textOverlay.style.display = 'block';
+            console.log('Displaying text overlay:', message);
+        }
+
+        function fadeOutAndExit() {
+            console.log('Starting text fade-out...');
+            textOverlay.classList.add('fade-out');
+            
+            // Exit after fade-out animation completes (2 seconds)
+            setTimeout(() => {
+                console.log('Fade-out complete, exiting...');
+                ipcRenderer.send('video-ended');
+            }, 2000);
+        }
+
+        function handleEscapeKey() {
+            escapePressed = true;
+            console.log('Escape key handled, exiting...');
+            // Temporarily enable mouse events to ensure we get focus
+            ipcRenderer.send('set-ignore-mouse-events', false);
+            
+            // If there's a text overlay, fade it out, otherwise exit immediately
+            if (overlayConfig.textMessage && overlayConfig.textMessage.trim() !== '' && !textOverlay.classList.contains('fade-out')) {
+                fadeOutAndExit();
+            } else {
+                setTimeout(() => {
+                    ipcRenderer.send('video-ended');
+                }, 100);
+            }
+        }
+
+        // Show loading initially
+        setTimeout(() => {
+            loadingDiv.style.display = 'none';
+        }, 2000);
+
+        // Request focus periodically to capture escape key
+        setInterval(() => {
+            if (document.hasFocus() === false) {
+                window.focus();
+            }
+        }, 1000);
+
+        // Video event handlers
+        video.addEventListener('loadstart', () => {
+            console.log('Video loading started...');
+        });
+
+        video.addEventListener('canplay', () => {
+            console.log('Video can start playing');
+            videoLoaded = true;
+            
+            // Auto-play the video
+            video.play().then(() => {
+                console.log('Video playback started');
+            }).catch(err => {
+                console.error('Video play error:', err);
+                showError('Failed to start video playback: ' + err.message);
+            });
+        });
+
+        video.addEventListener('ended', () => {
+            console.log('Video playback ended');
+            
+            // If there's a text overlay, fade it out gracefully before exiting
+            if (overlayConfig.textMessage && overlayConfig.textMessage.trim() !== '') {
+                fadeOutAndExit();
+            } else {
+                // No text overlay, exit immediately
+                ipcRenderer.send('video-ended');
+            }
+        });
+
+        video.addEventListener('error', (e) => {
+            hasError = true;
+            const error = video.error;
+            let errorMsg = 'Unknown video error';
+            
+            if (error) {
+                switch (error.code) {
+                    case error.MEDIA_ERR_ABORTED:
+                        errorMsg = 'Video playback was aborted';
+                        break;
+                    case error.MEDIA_ERR_NETWORK:
+                        errorMsg = 'Network error occurred while loading video';
+                        break;
+                    case error.MEDIA_ERR_DECODE:
+                        errorMsg = 'Video decoding error';
+                        break;
+                    case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        errorMsg = 'Video format not supported or file not found';
+                        break;
+                    default:
+                        errorMsg = 'Unknown video error (code: ' + error.code + ')';
+                }
+            }
+            
+            console.error('Video error:', errorMsg);
+            showError(errorMsg);
+        });
+
+        video.addEventListener('timeupdate', () => {
+            // Video progress tracking (status removed)
+            if (videoLoaded && !hasError) {
+                const progress = Math.round((video.currentTime / video.duration) * 100);
+                console.log(`Video progress: ${progress}%`);
+            }
+        });
+
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.style.display = 'block';
+            loadingDiv.style.display = 'none';
+            
+            // Notify main process of error and exit after 5 seconds
+            setTimeout(() => {
+                ipcRenderer.send('video-error', message);
+            }, 5000);
+        }
+
+        // Handle escape key to exit - multiple methods for reliability
+        let escapePressed = false;
+        
+        // Method 1: Document keydown event
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !escapePressed) {
+                e.preventDefault();
+                e.stopPropagation();
+                handleEscapeKey();
+            }
+        }, true); // Use capture phase
+
+        // Method 2: Window keydown event
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !escapePressed) {
+                e.preventDefault();
+                e.stopPropagation();
+                handleEscapeKey();
+            }
+        }, true); // Use capture phase
+
+        // Method 3: Body keydown event
+        document.body.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !escapePressed) {
+                e.preventDefault();
+                e.stopPropagation();
+                handleEscapeKey();
+            }
+        }, true); // Use capture phase
+
+        // Check if video sources exist after a delay
+        setTimeout(() => {
+            if (!videoLoaded && !hasError) {
+                console.log('Video loading timeout, checking for video files...');
+                // This will trigger the error handler if no valid source is found
+                video.load();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
