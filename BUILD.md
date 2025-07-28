@@ -13,12 +13,6 @@ This creates a directory at `build/VideoOverlay-win32-x64/` containing:
 - All required DLLs and dependencies
 - You can zip this entire folder for distribution
 
-### Option 2: Using electron-builder (Advanced)
-```bash
-npm run dist
-```
-Note: This might require administrator privileges or running PowerShell as Administrator due to Windows UAC restrictions.
-
 ## What You Get
 
 After running `npm run package-win`, you'll find:
@@ -79,20 +73,13 @@ VideoOverlay-win32-x64/
 
 If command line arguments like `--text` and `--text-with-video` don't work:
 
-### 1. Test Scripts
-Run the included test scripts to verify functionality:
-```bash
-test-all.bat          # Comprehensive tests
-quick-test.bat         # Quick test with sample messages
-```
-
-### 2. Debug Build
+### 1. Debug Build
 Create a debug build to see console output:
 ```bash
 npm run package-win-debug
 ```
 
-### 3. Argument Format Examples
+### 2. Argument Format Examples
 ```bash
 # Supported formats:
 VideoOverlay.exe --text "Your message here"
@@ -101,12 +88,12 @@ VideoOverlay.exe --text-with-video "Your message here"
 VideoOverlay.exe --text-with-video="Your message here"
 ```
 
-### 4. Common Issues
+### 3. Common Issues
 - **Quotes required**: Use quotes around messages with spaces
 - **Path issues**: Run from the correct directory or use full paths
 - **File locks**: Close any running instances before rebuilding
 
-### 5. Testing in Development
+### 4. Testing in Development
 Test arguments work in development mode first:
 ```bash
 npm start -- --text "Test message"

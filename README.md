@@ -2,6 +2,10 @@
 
 A fullscreen transparent video overlay application built with Electron.js that plays a video file over the desktop and automatically exits when playback is complete.
 
+## Demo
+
+![](demo.webm)
+
 ## Features
 
 - **Fullscreen Transparent Overlay**: Displays video content over the entire desktop
@@ -23,8 +27,8 @@ A fullscreen transparent video overlay application built with Electron.js that p
 
 2. **Add Your Video File**:
    Place your video file in the `video` directory with one of these names:
-   - `overlay.mp4` (recommended)
-   - `overlay.webm`
+   - `overlay.webm` (recommended)
+   - `overlay.mp4`
    - `overlay.mov`
 
 ## Usage
