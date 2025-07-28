@@ -4,7 +4,7 @@ A fullscreen transparent video overlay application built with Electron.js that p
 
 ## Demo
 
-![](demo.webm)
+![](demo.gif)
 
 ## Features
 
